@@ -11,22 +11,25 @@ class ReadBarcodeState extends State<ReadBarcode> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Leitor de Código de Barras"),
+        title: const Text("Acha Produto"),
       ),
       body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: Container(
-              color: Colors.black,
-              child: Center(
-                child: ElevatedButton(
-                  onPressed: () => _scanBarcode(context), // Passe o contexto para a função
-                  child: const Text("Abrir Câmera"),
-                ),
-              ),
-            ),
+          const Text(
+            "Bem-vindo ao Acha Produto!",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          Text("Valor do Código de Barras: $barcodeValue"),
+          const SizedBox(height: 20),
+          const Text(
+            "Toque no botão abaixo para escanear o código de barras e encontrar informações sobre o produto.",
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => _scanBarcode(context),
+            child: const Text("Escanear Código de Barras"),
+          ),
         ],
       ),
     );
@@ -34,10 +37,10 @@ class ReadBarcodeState extends State<ReadBarcode> {
 
   Future<void> _scanBarcode(BuildContext context) async {
     String scanResult = await FlutterBarcodeScanner.scanBarcode(
-      "#ff6666", // cor de fundo
-      "Cancelar", // texto do botão de cancelar
-      false, // flash ligado/desligado
-      ScanMode.BARCODE, // modo de varredura (pode ser QR_CODE, BARCODE, entre outros)
+      "#ff6666",
+      "Cancelar",
+      false,
+      ScanMode.BARCODE,
     );
 
     setState(() {
@@ -45,13 +48,7 @@ class ReadBarcodeState extends State<ReadBarcode> {
     });
 
     if (scanResult.isNotEmpty) {
-      // Se o código de barras não estiver vazio, navegue para a tela de detalhes
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ProductDetailsScreen(barcode: scanResult),
-        ),
-      );
+      widget.onBarcodeScanned(scanResult);
     }
   }
 }

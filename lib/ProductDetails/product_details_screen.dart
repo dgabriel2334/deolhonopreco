@@ -5,14 +5,16 @@ import 'package:http/http.dart' as http;
 class ProductDetailsScreen extends StatefulWidget {
   final String barcode;
 
-  const ProductDetailsScreen({Key? key, required this.barcode}) : super(key: key);
+  const ProductDetailsScreen({Key? key, required this.barcode})
+      : super(key: key);
 
   @override
   _ProductDetailsScreenState createState() => _ProductDetailsScreenState();
 }
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
-  late Map<String, dynamic> productDetails;
+  late Map<String, dynamic> productDetails = {};
+  late bool hasImage = false;
 
   @override
   void initState() {
@@ -21,13 +23,59 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Future<void> _fetchProductDetails() async {
-    final response = await http.get(Uri.parse('http://www.eanpictures.com.br:9000/api/desc/${widget.barcode}'));
+    final responseProduct = await http.get(Uri.parse(
+        'http://www.eanpictures.com.br:9000/api/desc/${widget.barcode}'));
+    final responseImage = await http.get(Uri.parse(
+        'http://www.eanpictures.com.br:9000/api/fotoexistej/${widget.barcode}'));
 
-    if (response.statusCode == 200) {
-      setState(() {
-        productDetails = json.decode(response.body);
-      });
+    final Map<String, dynamic> decodedBodyImage =
+        json.decode(responseImage.body);
+
+    if (responseProduct.statusCode == 200) {
+      final Map<String, dynamic> decodedBody =
+          json.decode(responseProduct.body);
+
+      if (decodedBody["Status"] == "200") {
+        if (decodedBodyImage["Status"] == "200") {
+          setState(() {
+            hasImage = true;
+          });
+        }
+        setState(() {
+          productDetails = decodedBody;
+        });
+      } else {
+        _showProductNotFoundAlert(decodedBody["Status_Desc"]);
+      }
+    } else {
+      // Código de resposta não é 200
+      final Map<String, dynamic> errorDetails =
+          json.decode(responseProduct.body);
+
+      _showProductNotFoundAlert(errorDetails["Status_Desc"]);
     }
+  }
+
+  void _showProductNotFoundAlert(String errorMessage) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Produto não encontrado'),
+          content: Text(
+              "Não foi possível encontrar o produto com código EAN: ${widget.barcode}"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -38,34 +86,34 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       ),
       body: productDetails != null
           ? Column(
-        children: [
-          // Display the image with adjusted aspect ratio
-          Container(
-            height: 200, // Adjust the height as needed
-            width: double.infinity,
-            child: Center(
-              child: Image.network(
-                'http://www.eanpictures.com.br:9000/api/gtin/${widget.barcode}',
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Descrição: ${productDetails["Nome"] == "" ? "Não informado" : productDetails["Nome"]}'),
-                Text('Marca: ${productDetails["Marca"] == "" ? "Não informado" : productDetails["Marca"]}'),
-                // Add other details as needed
+                Container(
+                  width: double.infinity,
+                  child: Center(
+                      child: hasImage
+                          ? Image.network(
+                              'http://www.eanpictures.com.br:9000/api/gtin/${widget.barcode}',
+                              height: 300,
+                            )
+                          : const Text('Imagem não disponível')),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          'Descrição: ${productDetails["Nome"] ?? "Não informado"}'),
+                      Text(
+                          'Marca: ${productDetails["Marca"] ?? "Não informado"}'),
+                    ],
+                  ),
+                ),
               ],
-            ),
-          ),
-        ],
-      )
+            )
           : const Center(
-        child: CircularProgressIndicator(),
-      ),
+              child: CircularProgressIndicator(),
+            ),
     );
   }
 }
